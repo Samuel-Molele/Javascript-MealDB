@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Meal DB</title>
+</head>
+<body>
+    
+    <script>
+
+        // Function to fetch meals based on main ingredient
+async function fetchMeals(mainIngredient) {
+    const response = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?i=${mainIngredient}`);
+    const data = await response.json();
+    return data.meals;
+}
+
+// Function to randomly select a meal from the list
+function selectRandomMeal(meals) {
+    const randomIndex = Math.floor(Math.random() * meals.length);
+    return meals[randomIndex];
+}
+
+// Function to display incomplete orders and mark them as complete
+function displayAndCompleteOrders(orders) {
+    const incompleteOrders = orders.filter(order => !order.completed);
+    if (incompleteOrders.length === 0) {
+        alert(" incomplete orders.");
+        return;
+    }
+    const orderNumbers = incompleteOrders.map(order => order.orderNumber);
+    const orderNumberToComplete = prompt(`Incomplete Orders:\n${orderNumbers.join("\n")}\nEnter order number to mark as complete (or enter 0 to skip):`);
+    if (orderNumberToComplete === null) return; // Cancelled prompt
+    const orderToComplete = orders.find(order => order.orderNumber === parseInt(orderNumberToComplete));
+    if (!orderToComplete) {
+        alert("Invalid order number.");
+        return;
+    }
+    orderToComplete.completed = true;
+    sessionStorage.setItem('orders', JSON.stringify(orders));
+    alert(`Order ${orderToComplete.orderNumber} marked as complete.`);
+}
+
+// Function to initialize the application
+async function init() {
+    let orders = JSON.parse(sessionStorage.getItem('orders')) || [];
+    let lastOrderNumber = parseInt(sessionStorage.getItem('lastOrderNumber')) || 0;
+
+    while (true) {
+        const mainIngredient = prompt("Enter main ingredient for your order:");
+        if (mainIngredient === null) break; // Cancelled prompt
+
+        const lowercaseIngredient = mainIngredient.toLowerCase().replace(/\s/g, '_');
+        const meals = await fetchMeals(lowercaseIngredient);
+        if (!meals) {
+            alert("No meals found for that ingredient. Please try again.");
+            continue;
+        }
+
+        const selectedMeal = selectRandomMeal(meals);
+        const order = {
+            description: selectedMeal.strMeal,
+            orderNumber: ++lastOrderNumber,
+            completed: false
+        };
+        orders.push(order);
+
+        sessionStorage.setItem('orders', JSON.stringify(orders));
+        sessionStorage.setItem('lastOrderNumber', lastOrderNumber.toString());
+
+        const continueOrder = confirm(`Your order: ${order.description}\nContinue ordering?`);
+        if (!continueOrder) break;
+    }
+
+    displayAndCompleteOrders(orders);
+}
+
+// Initialize the application
+init();
+
+    </script>
+</body>
+</html>
